@@ -59,19 +59,6 @@ class CrawlerService
     }
 
     /**
-     * Retorna lista de todos os scrapers com id e nome para exibição na UI.
-     *
-     * @return array<array{id: string, nome: string}>
-     */
-    public function getListaLojas(): array
-    {
-        return array_values(array_map(
-            fn (ScraperInterface $s) => ['id' => $s->identificador(), 'nome' => $s->nomeSite()],
-            $this->scrapers,
-        ));
-    }
-
-    /**
      * Retorna identificadores filtrando pelos fornecidos.
      * Se $lojas estiver vazio ou null, retorna todos.
      *

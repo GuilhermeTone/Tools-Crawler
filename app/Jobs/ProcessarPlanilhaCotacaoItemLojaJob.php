@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\CrawlerExecucao;
 use App\Models\PlanilhaCotacaoItem;
 use App\Services\CrawlerService;
 use App\Support\Utf8Sanitizer;
@@ -33,15 +32,12 @@ class ProcessarPlanilhaCotacaoItemLojaJob implements ShouldQueue
             return;
         }
 
-        $inicio = microtime(true);
         $item = PlanilhaCotacaoItem::findOrFail($this->itemId);
         $termoBusca = $this->termoBusca($item);
         $resultadosResumo = [];
         $erro = null;
-        $lojaNome = null;
 
         try {
-            $lojaNome = $crawler->getScraper($this->scraperIdentificador)->nomeSite();
             $resultados = $crawler->buscarEmLoja($termoBusca, $this->scraperIdentificador);
             $resultados = array_values(array_filter(
                 $resultados,
@@ -71,28 +67,12 @@ class ProcessarPlanilhaCotacaoItemLojaJob implements ShouldQueue
             $erro = "{$this->scraperIdentificador}: {$e->getMessage()}";
         }
 
-        $this->registrarExecucaoCrawler(
-            $item,
-            $erro ? 'erro' : (! empty($resultadosResumo) ? 'ok' : 'sem_resultado'),
-            count($resultadosResumo),
-            $this->duracaoMs($inicio),
-            $erro,
-            $lojaNome,
-            $termoBusca,
-        );
-
         $this->registrarConclusaoDaLoja($resultadosResumo, $erro);
     }
 
     public function failed(?\Throwable $exception): void
     {
         $erro = "{$this->scraperIdentificador}: ".($exception?->getMessage() ?? 'Falha ao processar a loja.');
-
-        $item = PlanilhaCotacaoItem::find($this->itemId);
-
-        if ($item) {
-            $this->registrarExecucaoCrawler($item, 'erro', 0, null, $erro, null);
-        }
 
         $this->registrarConclusaoDaLoja([], $erro);
     }
@@ -134,34 +114,6 @@ class ProcessarPlanilhaCotacaoItemLojaJob implements ShouldQueue
                 $item->planilha()->increment('itens_processados');
             }
         });
-    }
-
-    private function registrarExecucaoCrawler(
-        PlanilhaCotacaoItem $item,
-        string $status,
-        int $resultadosCount,
-        ?int $duracaoMs,
-        ?string $erro,
-        ?string $lojaNome,
-        ?string $termoBusca = null,
-    ): void {
-        CrawlerExecucao::create([
-            'user_id' => $item->planilha?->user_id,
-            'planilha_cotacao_id' => $item->planilha_cotacao_id,
-            'planilha_cotacao_item_id' => $item->id,
-            'loja_id' => $this->scraperIdentificador,
-            'loja_nome' => $lojaNome,
-            'termo' => $termoBusca ?: $this->termoBusca($item),
-            'status' => $status,
-            'resultados_count' => $resultadosCount,
-            'duracao_ms' => $duracaoMs,
-            'erro_mensagem' => $erro,
-        ]);
-    }
-
-    private function duracaoMs(float $inicio): int
-    {
-        return max(0, (int) round((microtime(true) - $inicio) * 1000));
     }
 
     private function termoBusca(PlanilhaCotacaoItem $item): string

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AssinaturaController;
-use App\Http\Controllers\CrawlerSaudeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FerramentaController;
 use App\Http\Controllers\PlanilhaCotacaoController;
@@ -34,7 +33,6 @@ Route::middleware(['auth', 'subscribed'])->group(function () {
     Route::redirect('/orcamentos/{any}', '/planilhas')->where('any', '.*');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
-    Route::get('/crawlers/saude', [CrawlerSaudeController::class, 'index'])->name('crawlers.saude');
 
     Route::prefix('buscas-especificas')->name('ferramentas.')->group(function () {
         Route::get('/', [FerramentaController::class, 'index'])->name('index');

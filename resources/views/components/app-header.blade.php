@@ -27,15 +27,6 @@
                               : 'text-gray-600 border-gray-200 bg-white hover:bg-gray-50' }}">
                     Buscas específicas
                 </a>
-                @if (auth()->user()->isAdmin())
-                    <a href="{{ route('crawlers.saude') }}"
-                       class="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors
-                              {{ request()->routeIs('crawlers.*')
-                                  ? 'text-blue-700 border-blue-200 bg-blue-50'
-                                  : 'text-gray-600 border-gray-200 bg-white hover:bg-gray-50' }}">
-                        Saúde das lojas
-                    </a>
-                @endif
                 <a href="{{ route('assinatura.index') }}"
                    title="{{ auth()->user()->subscribed('default') ? 'Assinatura ativa' : 'Sem assinatura ativa' }}"
                    class="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors
