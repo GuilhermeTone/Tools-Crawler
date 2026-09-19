@@ -332,27 +332,6 @@ Reiniciar workers depois de mudancas em jobs/services:
 docker compose restart horizon
 ```
 
-## Saude dos crawlers
-
-A rota `/crawlers/saude` mostra status das lojas para usuarios admin.
-
-Controller:
-
-- [CrawlerSaudeController.php](app/Http/Controllers/CrawlerSaudeController.php)
-
-Modelo:
-
-- [CrawlerExecucao.php](app/Models/CrawlerExecucao.php)
-
-Cada execucao de loja registra:
-
-- loja;
-- termo;
-- status (`ok`, `sem_resultado`, `erro`);
-- quantidade de resultados;
-- duracao;
-- mensagem de erro.
-
 ## Banco de dados
 
 Modelos principais:
@@ -360,7 +339,6 @@ Modelos principais:
 - [User.php](app/Models/User.php): usuario e assinatura.
 - [PlanilhaCotacao.php](app/Models/PlanilhaCotacao.php): arquivo enviado e estado geral.
 - [PlanilhaCotacaoItem.php](app/Models/PlanilhaCotacaoItem.php): linha da planilha e resultados encontrados.
-- [CrawlerExecucao.php](app/Models/CrawlerExecucao.php): historico de execucoes por loja.
 - [FerramentaBusca.php](app/Models/FerramentaBusca.php): busca especifica avulsa.
 - [ResultadoBusca.php](app/Models/ResultadoBusca.php): resultado da busca especifica.
 - [Orcamento.php](app/Models/Orcamento.php) e [OrcamentoItem.php](app/Models/OrcamentoItem.php): legado/redirecionado para planilhas.

@@ -8,7 +8,6 @@ use App\Http\Requests\Planilhas\PlanilhaCotacaoItemRequest;
 use App\Http\Requests\Planilhas\PlanilhaCotacaoRequest;
 use App\Http\Requests\Planilhas\RefazerBuscaItemRequest;
 use App\Http\Requests\Planilhas\SelecionarResultadoRequest;
-use App\Http\Requests\VisualizarCrawlerSaudeRequest;
 use App\Models\PlanilhaCotacao;
 use App\Models\PlanilhaCotacaoItem;
 use App\Models\User;
@@ -69,21 +68,6 @@ class PlanilhaCotacaoRequestTest extends TestCase
             ['required', 'string', 'min:2', 'max:100'],
             (new BuscarFerramentaRequest)->rules()['termo'],
         );
-    }
-
-    public function test_saude_dos_crawlers_exige_usuario_admin(): void
-    {
-        $admin = new User(['tipo' => 'admin']);
-        $usuario = new User(['tipo' => 'usuario']);
-
-        $requestAdmin = new VisualizarCrawlerSaudeRequest;
-        $requestAdmin->setUserResolver(fn () => $admin);
-
-        $requestUsuario = new VisualizarCrawlerSaudeRequest;
-        $requestUsuario->setUserResolver(fn () => $usuario);
-
-        $this->assertTrue($requestAdmin->authorize());
-        $this->assertFalse($requestUsuario->authorize());
     }
 
     /**
