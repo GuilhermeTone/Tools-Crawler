@@ -104,20 +104,39 @@ Assinatura:
 
 O sistema usa Laravel Cashier. As rotas principais exigem usuario autenticado e assinatura ativa pelo middleware [EnsureSubscribed.php](app/Http/Middleware/EnsureSubscribed.php).
 
+## Arquitetura HTTP
+
+A camada HTTP separa transporte, validacao e regras de negocio:
+
+- controllers recebem requests validados, delegam o caso de uso e retornam view, JSON, redirect ou download;
+- Form Requests em [app/Http/Requests](app/Http/Requests) validam a entrada;
+- [PlanilhaCotacaoRequest.php](app/Http/Requests/Planilhas/PlanilhaCotacaoRequest.php) autoriza o acesso somente ao dono da planilha;
+- [PlanilhaCotacaoItemRequest.php](app/Http/Requests/Planilhas/PlanilhaCotacaoItemRequest.php) tambem garante que o item pertence a planilha da rota;
+- services concentram consultas, persistencia, transacoes de estado e disparo de jobs;
+- presenters montam os payloads consumidos pelas views e pelo JavaScript.
+
+Principais classes dessa camada:
+
+- [DashboardService.php](app/Services/DashboardService.php): agrega os dados exibidos no dashboard;
+- [FerramentaBuscaService.php](app/Services/FerramentaBuscaService.php): cria, consulta e exclui buscas especificas do usuario;
+- [PlanilhaCotacaoService.php](app/Services/Planilhas/PlanilhaCotacaoService.php): executa os casos de uso das planilhas;
+- [PlanilhaCotacaoPresenter.php](app/Services/Planilhas/PlanilhaCotacaoPresenter.php): transforma planilhas e itens em dados de apresentacao.
+
 ## Fluxo da planilha
 
 1. Usuario envia uma planilha XLSX em `/planilhas`.
-2. [PlanilhaCotacaoController.php](app/Http/Controllers/PlanilhaCotacaoController.php) salva o arquivo em `storage/app/planilhas/originais`.
-3. [XlsxCotacaoService.php](app/Services/Planilhas/XlsxCotacaoService.php) le a primeira aba do XLSX.
-4. Cada linha valida vira um [PlanilhaCotacaoItem](app/Models/PlanilhaCotacaoItem.php).
-5. [ProcessarPlanilhaCotacaoJob.php](app/Jobs/ProcessarPlanilhaCotacaoJob.php) cria um batch de jobs, um por item e loja.
-6. [ProcessarPlanilhaCotacaoItemLojaJob.php](app/Jobs/ProcessarPlanilhaCotacaoItemLojaJob.php) busca o item em uma loja especifica.
-7. Cada loja usa um scraper em [app/Services/Scrapers](app/Services/Scrapers).
-8. [CrawlerService.php](app/Services/CrawlerService.php) normaliza o termo, executa o scraper, remove duplicados, enriquece produtos e chama o ranking.
-9. [MeilisearchProductSearchService.php](app/Services/MeilisearchProductSearchService.php) ranqueia os candidatos e aplica regras de qualidade.
-10. Os resultados sao salvos no campo `resultados` do item.
-11. [FinalizarPlanilhaCotacaoJob.php](app/Jobs/FinalizarPlanilhaCotacaoJob.php) fecha o processamento e gera a planilha processada.
-12. Na tela, o usuario escolhe o resultado, ajusta margem e baixa a planilha final.
+2. [StorePlanilhaCotacaoRequest.php](app/Http/Requests/Planilhas/StorePlanilhaCotacaoRequest.php) valida nome, formato e tamanho do arquivo.
+3. [PlanilhaCotacaoController.php](app/Http/Controllers/PlanilhaCotacaoController.php) delega a criacao para [PlanilhaCotacaoService.php](app/Services/Planilhas/PlanilhaCotacaoService.php).
+4. O service salva o arquivo em `storage/app/planilhas/originais` e [XlsxCotacaoService.php](app/Services/Planilhas/XlsxCotacaoService.php) le a primeira aba do XLSX.
+5. Cada linha valida vira um [PlanilhaCotacaoItem](app/Models/PlanilhaCotacaoItem.php).
+6. [ProcessarPlanilhaCotacaoJob.php](app/Jobs/ProcessarPlanilhaCotacaoJob.php) cria um batch de jobs, um por item e loja.
+7. [ProcessarPlanilhaCotacaoItemLojaJob.php](app/Jobs/ProcessarPlanilhaCotacaoItemLojaJob.php) busca o item em uma loja especifica.
+8. Cada loja usa um scraper em [app/Services/Scrapers](app/Services/Scrapers).
+9. [CrawlerService.php](app/Services/CrawlerService.php) normaliza o termo, executa o scraper, remove duplicados, enriquece produtos e chama o ranking.
+10. [MeilisearchProductSearchService.php](app/Services/MeilisearchProductSearchService.php) ranqueia os candidatos e aplica regras de qualidade.
+11. Os resultados sao salvos no campo `resultados` do item.
+12. [FinalizarPlanilhaCotacaoJob.php](app/Jobs/FinalizarPlanilhaCotacaoJob.php) fecha o processamento e gera a planilha processada.
+13. Na tela, o usuario escolhe o resultado, ajusta margem e baixa a planilha final.
 
 ## Estrutura da planilha
 
@@ -250,6 +269,9 @@ Marca:
 Backend:
 
 - [PlanilhaCotacaoController.php](app/Http/Controllers/PlanilhaCotacaoController.php)
+- [app/Http/Requests/Planilhas](app/Http/Requests/Planilhas)
+- [PlanilhaCotacaoService.php](app/Services/Planilhas/PlanilhaCotacaoService.php)
+- [PlanilhaCotacaoPresenter.php](app/Services/Planilhas/PlanilhaCotacaoPresenter.php)
 - [PlanilhaCotacao.php](app/Models/PlanilhaCotacao.php)
 - [PlanilhaCotacaoItem.php](app/Models/PlanilhaCotacaoItem.php)
 
@@ -293,11 +315,11 @@ Status possiveis:
 - `nao_encontrado`
 - `erro`
 
-Ao baixar a planilha, o controller revalida os selecionados antes de gerar o arquivo final.
+Ao baixar a planilha, [PlanilhaCotacaoService.php](app/Services/Planilhas/PlanilhaCotacaoService.php) revalida os selecionados antes de gerar o arquivo final.
 
 ## Buscas especificas
 
-A tela `/buscas-especificas` usa [FerramentaController.php](app/Http/Controllers/FerramentaController.php).
+A tela `/buscas-especificas` usa [FerramentaController.php](app/Http/Controllers/FerramentaController.php), [BuscarFerramentaRequest.php](app/Http/Requests/BuscarFerramentaRequest.php) e [FerramentaBuscaService.php](app/Services/FerramentaBuscaService.php).
 
 Fluxo:
 
@@ -451,7 +473,12 @@ Resultados ficam gravados no item da planilha. Depois de corrigir regra de busca
 - Cadastro de lojas/crawlers ativos: [CrawlerService.php](app/Services/CrawlerService.php)
 - Scraping de uma loja especifica: [app/Services/Scrapers](app/Services/Scrapers)
 - Leitura/escrita XLSX: [XlsxCotacaoService.php](app/Services/Planilhas/XlsxCotacaoService.php)
-- Fluxo web de planilhas: [PlanilhaCotacaoController.php](app/Http/Controllers/PlanilhaCotacaoController.php)
+- Validacao e autorizacao HTTP: [app/Http/Requests](app/Http/Requests)
+- Casos de uso de planilhas: [PlanilhaCotacaoService.php](app/Services/Planilhas/PlanilhaCotacaoService.php)
+- Payloads das telas de planilhas: [PlanilhaCotacaoPresenter.php](app/Services/Planilhas/PlanilhaCotacaoPresenter.php)
+- Coordenacao HTTP de planilhas: [PlanilhaCotacaoController.php](app/Http/Controllers/PlanilhaCotacaoController.php)
+- Dashboard: [DashboardService.php](app/Services/DashboardService.php)
+- Buscas especificas: [FerramentaBuscaService.php](app/Services/FerramentaBuscaService.php)
 - UI de resultados da planilha: [public/js/planilhas](public/js/planilhas)
 - Jobs/fila: [app/Jobs](app/Jobs)
 - Assinatura/acesso: [AssinaturaController.php](app/Http/Controllers/AssinaturaController.php) e [EnsureSubscribed.php](app/Http/Middleware/EnsureSubscribed.php)
